@@ -1,0 +1,80 @@
+#!ansible-playbook -vv
+## pycronjob.pb.yml
+## Deploy some python project as a cronjob
+## Author: Ctrl-S
+## [Linux]
+---
+- name: 'install_pycronjob'
+  hosts: 'localhost'
+  vars_files:
+    - 'vars/vars.yml'
+  #   - 'vars/secret-vars.yml'
+  pre_tasks: # (Run sequentially before roles.)
+  - name: '[RedHat] packages installed'
+    ansible.builtin.dnf:
+      state: latest
+      name:
+        - 'python3'
+        - 'python3-pip'
+        - 'cronie' ## cron.
+        - 'cronie-anacron' ## anacron.
+    become: yes
+    when: ansible_facts['os_family'] == 'RedHat'
+
+  - name: '[Debian] packages installed'
+    ansible.builtin.apt:
+      ## Required for FUSE mount ($ weed mount)
+      state: latest
+      name:
+        - 'python3'
+        - 'python3-pip'
+        - 'cron' ## cron.
+    become: yes
+    when: ansible_facts['os_family'] == 'Debian'
+
+  - name: 'Project dir created'
+    ansible.builtin.file:
+      state: 'directory'
+      owner: "{{ user }}"
+      group: "{{ group }}"
+      mode: 'u=rwX,g=rwX,o=rX' # 'X' = Set dirs listable.
+      path: "{{ proj_dir }}"
+
+  - name: 'Project files copied'
+    ansible.builtin.copy:
+      src: "files/deploy/" ## Trailng '/' copy contents.
+      dest: "{{ proj_dir }}"
+      mode: "u=rwX,g=rX,o=rX"
+      owner: "{{ user }}"
+      group: "{{ group }}"
+
+  - name: 'Python venv setup'
+    ansible.builtin.pip:
+      state: present
+      virtualenv: "{{ proj_dir }}/venv"
+      requirements: "{{ proj_dir }}/requirements.txt"
+    become_user: "{{ user }}"
+
+  - name: 'Manual run script created'
+    ansible.builtin.copy:
+      content: >
+        ## ANSIBLE-MANAGED!
+        ## "{{ proj_dir }}/manual_run.sh"
+        ## Manually trigger a run using the the cronjob entrypoint.
+        cd {{ proj_dir | quote }}
+        {{ proj_dir | quote }}/venv/bin/python {{ proj_dir | quote }}/cronjob_main.py
+      dest: "{{ proj_dir }}/manual_run.sh"
+      mode: "u=rwx,g=rx,o=rx"
+      owner: "{{ user }}"
+      group: "{{ group }}"
+
+  - name: 'Cronjob created'
+    ansible.builtin.cron:
+      state: present
+      name: "{{ name_static }}" ## Should be unchanging.
+      cron_file: "{{ name_static }}" ## Should be unchanging.
+      user: "{{ user }}"
+      weekday: '0,4'
+      job: >
+        cd {{ proj_dir | quote }} ;
+        venv/bin/python cronjob_main.py ;

@@ -1,0 +1,8 @@
+## .gitignore for PROJECT
+debug/
+logs/
+temp/
+work/
+done/
+config.py
+*.pyc

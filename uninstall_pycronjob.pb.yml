@@ -1,0 +1,37 @@
+#!ansible-playbook -vv
+## uninstall_pycronjob.pb.yml
+## Remove everything we installed
+## Author: Ctrl-S
+## [Linux]
+---
+- name: 'uninstall_pycronjob'
+  hosts: 'localhost'
+  vars_files:
+    - 'vars/vars.yml'
+    # - 'vars/secret-vars.yml'
+  pre_tasks: # (Run sequentially before roles.)
+  - name: 'Project dir removed'
+    ansible.builtin.file:
+      state: 'absent'
+      owner: "{{ user }}"
+      group: "{{ group }}"
+      mode: 'u=rwX,g=rwX,o=' # 'X' = Set dirs listable.
+      path: "{{ proj_dir }}"
+
+  - name: 'Python venv removed'
+    ansible.builtin.pip:
+      state: absent
+      virtualenv: "{{proj_dir}}/venv"
+      requirements: "{{proj_dir}}/requirements.txt"
+    become_user: "{{ user }}"
+
+  - name: 'Cronjob removed'
+    ansible.builtin.cron:
+      state: absent
+      name: 'gallery_dl'
+      cron_file: 'ctrls-gallery_dl'
+      user: "{{ user }}"
+      special_time: weekly
+      job: >
+        cd {{ proj_dir | quote }} ;
+        venv/bin/python cronjob_main.py ;

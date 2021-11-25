@@ -1,0 +1,4 @@
+## requirements.txt
+## Python requirements.txt file.
+## Packages required for this code to work.
+requests

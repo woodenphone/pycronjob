@@ -1,0 +1,8 @@
+## vars.yml
+---
+## random chars: $ < /dev/urandom tr -dc a-f0-9 | head -c${1:-8};echo '';
+name_static: 'ctrls-helloworld-f15c46f5' # As a unique identifier. [a-zA-Z0-9_-]
+name_pretty: 'Hello World Example' # For humans to read.
+proj_dir: "/home/ctrls/gallery_dl"
+user: 'ctrls'
+group: 'ctrls'
